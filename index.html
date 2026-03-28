@@ -17,8 +17,8 @@
       justify-content: center;
       padding: 20px;
     }
-    .screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
-    .screen.active { display: flex; align-items: center; justify-content: center; }
+    .screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .screen.active { display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .container {
       background: white;
       padding: 40px;
@@ -90,14 +90,7 @@
       margin: 30px auto;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    canvas { display: block; margin: 0 auto; background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%); border: 4px solid #333; border-radius: 10px; }
-    .game-container {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
+    canvas { display: block; margin: 0 auto; background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%); border: 4px solid #333; border-radius: 10px; max-width: 100%; }
     .game-info { 
       display: flex; 
       justify-content: space-around; 
@@ -145,7 +138,7 @@
 </head>
 <body>
 
-<!-- 大厅界面 -->
+<!-- 大厅 -->
 <div id="lobby" class="screen active">
   <div class="container">
     <h1>⚔️ 网页1v1格斗游戏</h1>
@@ -157,7 +150,7 @@
   </div>
 </div>
 
-<!-- 等待界面 -->
+<!-- 等待 -->
 <div id="waiting" class="screen">
   <div class="container">
     <h2>🔍 寻找对手中...</h2>
@@ -167,7 +160,7 @@
   </div>
 </div>
 
-<!-- 游戏界面 -->
+<!-- 游戏 -->
 <div id="battle" class="screen">
   <div class="container" style="padding: 20px;">
     <div class="game-info">
@@ -185,18 +178,16 @@
         <div class="skill-info" id="skill2"></div>
       </div>
     </div>
-    <div class="game-container">
-      <canvas id="gameCanvas" width="900" height="450"></canvas>
-    </div>
+    <canvas id="gameCanvas" width="900" height="450"></canvas>
     <div class="controls">
       <p><strong>⌨️ 操作说明</strong></p>
-      <p>← → 移动 | ↑ 跳跃 | 空格 普通攻击 | Ctrl 释放技能</p>
+      <p>← → 移动 | ↑ 跳跃 | 空格 攻击 | Ctrl 技能</p>
     </div>
     <button class="btn btn-secondary" onclick="surrender()">投降</button>
   </div>
 </div>
 
-<!-- 结算界面 -->
+<!-- 结果 -->
 <div id="result" class="screen">
   <div class="container">
     <h2 id="resultTitle" style="font-size: 48px; margin-bottom: 30px;"></h2>
@@ -206,7 +197,7 @@
 </div>
 
 <script>
-// ============ Firebase 配置 ============
+// Firebase 初始化
 const firebaseConfig = {
   apiKey: "AIzaSyClPWDNsJXUerSS6YGfMsir1H3KAut1gtE",
   authDomain: "game-d7e6d.firebaseapp.com",
@@ -220,76 +211,20 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ============ 英雄定义 ============
+// 英雄数据
 const HEROES = {
-  'sword': { 
-    name: '⚔️ 剑客', 
-    hp: 100, 
-    damage: 16, 
-    speed: 7,
-    emoji: '🗡️',
-    skill: '三段斩'
-  },
-  'knight': { 
-    name: '🛡️ 重骑', 
-    hp: 140, 
-    damage: 12, 
-    speed: 5,
-    emoji: '🛡️',
-    skill: '盾墙'
-  },
-  'pyro': { 
-    name: '🔥 火法', 
-    hp: 90, 
-    damage: 18, 
-    speed: 6,
-    emoji: '🔥',
-    skill: '火雨'
-  },
-  'frost': { 
-    name: '❄️ 冰法', 
-    hp: 90, 
-    damage: 13, 
-    speed: 6,
-    emoji: '❄️',
-    skill: '冰冻'
-  },
-  'bolt': { 
-    name: '⚡ 雷电', 
-    hp: 85, 
-    damage: 22, 
-    speed: 7,
-    emoji: '⚡',
-    skill: '闪电'
-  },
-  'assassin': { 
-    name: '🗡️ 刺客', 
-    hp: 70, 
-    damage: 21, 
-    speed: 10,
-    emoji: '🗡️',
-    skill: '影分身'
-  },
-  'druid': { 
-    name: '🌿 自然', 
-    hp: 110, 
-    damage: 11, 
-    speed: 5,
-    emoji: '🌿',
-    skill: '治愈'
-  },
-  'beast': { 
-    name: '👹 怪兽', 
-    hp: 120, 
-    damage: 14, 
-    speed: 6,
-    emoji: '👹',
-    skill: '狂暴'
-  }
+  'sword': { name: '⚔️ 剑客', hp: 100, damage: 16, speed: 7, emoji: '🗡️' },
+  'knight': { name: '🛡️ 重骑', hp: 140, damage: 12, speed: 5, emoji: '🛡️' },
+  'pyro': { name: '🔥 火法', hp: 90, damage: 18, speed: 6, emoji: '🔥' },
+  'frost': { name: '❄️ 冰法', hp: 90, damage: 13, speed: 6, emoji: '❄️' },
+  'bolt': { name: '⚡ 雷电', hp: 85, damage: 22, speed: 7, emoji: '⚡' },
+  'assassin': { name: '🗡️ 刺客', hp: 70, damage: 21, speed: 10, emoji: '🗡️' },
+  'druid': { name: '🌿 自然', hp: 110, damage: 11, speed: 5, emoji: '🌿' },
+  'beast': { name: '👹 怪兽', hp: 120, damage: 14, speed: 6, emoji: '👹' }
 };
 
-// ============ 游戏状态 ============
-let gameState = {
+// 全局状态
+let game = {
   playerName: '',
   selectedHero: 'sword',
   playerNumber: 0,
@@ -302,298 +237,268 @@ let gameState = {
   oppoSkillCD: 0,
   myX: 150,
   oppoX: 750,
+  myY: 300,
+  oppoY: 300,
   myVY: 0,
   oppoVY: 0,
   isJumping: false,
-  oppoIsJumping: false,
-  isAttacking: false,
-  oppoIsAttacking: false,
-  skillEffects: []
+  effects: [],
+  roomRef: null,
+  keys: {}
 };
 
-// ============ 工具函数 ============
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 工具
 function el(id) { return document.getElementById(id); }
-
-function show(screenId) {
+function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  el(screenId).classList.add('active');
+  el(id).classList.add('active');
 }
 
-function genRoomId() {
-  return Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-}
-
-// ============ 初始化 ============
+// 初始化英雄选择
 function initHeroes() {
   let html = '';
   for (let [key, hero] of Object.entries(HEROES)) {
     html += `<button class="hero-btn" onclick="selectHero('${key}')" id="hero_${key}">
-      <div>${hero.name}</div>
-      <div style="font-size: 11px; margin-top: 3px;">HP:${hero.hp} ATK:${hero.damage}</div>
+      ${hero.name}<br><small>HP:${hero.hp} ATK:${hero.damage}</small>
     </button>`;
   }
   el('heroList').innerHTML = html;
   selectHero('sword');
 }
 
-function selectHero(heroKey) {
-  gameState.selectedHero = heroKey;
-  document.querySelectorAll('.hero-btn').forEach(btn => btn.classList.remove('selected'));
-  el('hero_' + heroKey).classList.add('selected');
+function selectHero(key) {
+  game.selectedHero = key;
+  document.querySelectorAll('.hero-btn').forEach(b => b.classList.remove('selected'));
+  el('hero_' + key).classList.add('selected');
   updateJoinBtn();
 }
 
 function updateJoinBtn() {
-  const hasName = el('playerName').value.trim().length > 0;
-  el('joinBtn').disabled = !hasName;
+  el('joinBtn').disabled = !el('playerName').value.trim();
 }
 
 el('playerName').addEventListener('input', updateJoinBtn);
 
-// ============ 游戏流程 ============
+// 加入游戏
 async function joinGame() {
-  gameState.playerName = el('playerName').value.trim();
-  if (!gameState.playerName) {
-    alert('请输入昵称！');
-    return;
-  }
+  game.playerName = el('playerName').value.trim();
+  if (!game.playerName) { alert('请输入昵称'); return; }
   
   show('waiting');
   
   try {
-    // 查询队列
-    const queueRef = db.ref('queue');
-    const queueSnap = await queueRef.once('value');
-    const queue = queueSnap.val() || [];
+    const queueRef = db.ref('queue_v2');
+    const snap = await queueRef.once('value');
+    const queue = snap.val() || [];
     
     if (queue.length > 0) {
-      // 有人等待，加入
+      // 加入配对
       const opponent = queue[0];
-      gameState.roomId = opponent.roomId;
-      gameState.playerNumber = 2;
-      gameState.opponentName = opponent.name;
+      game.roomId = opponent.roomId;
+      game.playerNumber = 2;
+      game.opponentName = opponent.name;
       
-      // 更新房间
-      const myHero = HEROES[gameState.selectedHero];
-      await db.ref('rooms/' + gameState.roomId).update({
+      const hero = HEROES[game.selectedHero];
+      await db.ref('rooms_v2/' + game.roomId).update({
         player2: {
-          name: gameState.playerName,
-          hero: gameState.selectedHero,
-          hp: myHero.hp
+          name: game.playerName,
+          hero: game.selectedHero,
+          hp: hero.hp,
+          x: 750,
+          y: 300
         }
       });
       
-      // 移除队列
       await queueRef.set(queue.slice(1));
-      
-      setTimeout(startGame, 800);
+      setTimeout(startGame, 1000);
     } else {
       // 创建房间
-      gameState.roomId = genRoomId();
-      gameState.playerNumber = 1;
+      game.roomId = '_' + Math.random().toString(36).substr(2, 9);
+      game.playerNumber = 1;
       
-      const myHero = HEROES[gameState.selectedHero];
-      await db.ref('rooms/' + gameState.roomId).set({
+      const hero = HEROES[game.selectedHero];
+      await db.ref('rooms_v2/' + game.roomId).set({
         player1: {
-          name: gameState.playerName,
-          hero: gameState.selectedHero,
-          hp: myHero.hp
+          name: game.playerName,
+          hero: game.selectedHero,
+          hp: hero.hp,
+          x: 150,
+          y: 300
         },
-        player2: null,
-        started: false
+        player2: null
       });
       
-      // 加入队列
       await queueRef.set([...queue, {
-        roomId: gameState.roomId,
-        name: gameState.playerName
+        roomId: game.roomId,
+        name: game.playerName
       }]);
       
-      waitForPlayer2();
+      waitOpponent();
     }
-  } catch (error) {
-    console.error('错误:', error);
-    alert('连接失败: ' + error.message);
+  } catch (e) {
+    console.error('错误:', e);
+    alert('连接失��');
     show('lobby');
   }
 }
 
-function waitForPlayer2() {
+function waitOpponent() {
   const timeout = setTimeout(() => {
     alert('等待超时');
     cancelQueue();
   }, 120000);
   
-  db.ref('rooms/' + gameState.roomId).on('value', snap => {
-    if (snap.val() && snap.val().player2) {
+  db.ref('rooms_v2/' + game.roomId).on('value', snap => {
+    if (snap.val().player2) {
       clearTimeout(timeout);
-      db.ref('rooms/' + gameState.roomId).off();
-      gameState.opponentName = snap.val().player2.name;
+      game.opponentName = snap.val().player2.name;
+      db.ref('rooms_v2/' + game.roomId).off();
       setTimeout(startGame, 500);
     }
   });
 }
 
 function cancelQueue() {
-  db.ref('queue').once('value', snap => {
+  db.ref('queue_v2').once('value', snap => {
     const queue = snap.val() || [];
-    const filtered = queue.filter(item => item.roomId !== gameState.roomId);
-    db.ref('queue').set(filtered.length > 0 ? filtered : null);
+    db.ref('queue_v2').set(queue.filter(q => q.roomId !== game.roomId));
   });
   show('lobby');
 }
 
+// 开始游戏
 function startGame() {
   show('battle');
-  gameState.gameActive = true;
+  game.gameActive = true;
   
-  const myHero = HEROES[gameState.selectedHero];
-  gameState.myHP = myHero.hp;
-  gameState.oppoHP = myHero.hp;
+  const hero = HEROES[game.selectedHero];
+  game.myHP = hero.hp;
+  game.oppoHP = hero.hp;
   
-  const p1Name = gameState.playerNumber === 1 ? gameState.playerName : gameState.opponentName;
-  const p2Name = gameState.playerNumber === 1 ? gameState.opponentName : gameState.playerName;
+  const p1 = game.playerNumber === 1 ? game.playerName : game.opponentName;
+  const p2 = game.playerNumber === 1 ? game.opponentName : game.playerName;
   
-  el('player1Name').textContent = p1Name + ' ' + HEROES[gameState.selectedHero].name;
-  el('player2Name').textContent = p2Name + ' ' + myHero.name;
+  el('player1Name').textContent = p1 + ' ' + HEROES[game.selectedHero].name;
+  el('player2Name').textContent = p2 + ' ' + hero.name;
   
-  updateUI();
+  game.roomRef = db.ref('rooms_v2/' + game.roomId);
+  game.roomRef.on('value', syncGame);
+  
+  document.onkeydown = keyDown;
+  document.onkeyup = keyUp;
+  
   gameLoop();
-  document.onkeydown = handleKeyDown;
-  document.onkeyup = handleKeyUp;
 }
 
-let keys = {};
-function handleKeyDown(e) {
-  if (!gameState.gameActive) return;
-  keys[e.key] = true;
+function keyDown(e) {
+  if (!game.gameActive) return;
+  game.keys[e.key] = true;
   
-  if (e.key === ' ') {
-    e.preventDefault();
-    attack();
-  }
-  if (e.key === 'Control') {
-    e.preventDefault();
-    useSkill();
-  }
-  if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    jump();
-  }
+  if (e.key === ' ') { e.preventDefault(); attack(); }
+  if (e.key === 'Control') { e.preventDefault(); skill(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); jump(); }
 }
 
-function handleKeyUp(e) {
-  keys[e.key] = false;
+function keyUp(e) {
+  game.keys[e.key] = false;
 }
 
 function attack() {
-  if (gameState.isAttacking) return;
-  gameState.isAttacking = true;
-  
-  const myHero = HEROES[gameState.selectedHero];
-  gameState.oppoHP -= myHero.damage;
-  
-  // 添加打击特效
-  gameState.skillEffects.push({
-    x: gameState.oppoX,
-    y: 200,
-    text: '💥',
-    life: 30
-  });
-  
-  setTimeout(() => gameState.isAttacking = false, 300);
-  checkGameEnd();
+  const hero = HEROES[game.selectedHero];
+  game.oppoHP -= hero.damage;
+  game.effects.push({ x: game.oppoX, y: game.oppoY - 50, text: '💥', life: 30 });
+  checkEnd();
 }
 
-function useSkill() {
-  if (gameState.mySkillCD > 0) return;
-  
-  const myHero = HEROES[gameState.selectedHero];
-  gameState.mySkillCD = 8; // 8秒冷却
-  gameState.oppoHP -= myHero.damage * 1.5;
-  
-  // 添加技能特效
-  gameState.skillEffects.push({
-    x: gameState.oppoX,
-    y: 150,
-    text: '⚡✨',
-    life: 50
-  });
-  
-  checkGameEnd();
+function skill() {
+  if (game.mySkillCD > 0) return;
+  const hero = HEROES[game.selectedHero];
+  game.mySkillCD = 8;
+  game.oppoHP -= hero.damage * 1.5;
+  game.effects.push({ x: game.oppoX, y: game.oppoY - 80, text: '⚡✨', life: 50 });
+  checkEnd();
 }
 
 function jump() {
-  if (!gameState.isJumping) {
-    gameState.myVY = -12;
-    gameState.isJumping = true;
+  if (!game.isJumping) {
+    game.myVY = -15;
+    game.isJumping = true;
   }
 }
 
-function updateUI() {
-  const myHero = HEROES[gameState.selectedHero];
-  const myHPPercent = Math.max(0, gameState.myHP / myHero.hp * 100);
-  const oppoHPPercent = Math.max(0, gameState.oppoHP / myHero.hp * 100);
+function syncGame(snap) {
+  const data = snap.val();
+  if (!data) return;
   
-  el('health1').style.width = myHPPercent + '%';
-  el('health2').style.width = oppoHPPercent + '%';
-  el('hp1').textContent = Math.max(0, Math.floor(gameState.myHP));
-  el('hp2').textContent = Math.max(0, Math.floor(gameState.oppoHP));
-  
-  // 技能冷却显示
-  if (gameState.mySkillCD > 0) {
-    el('skill1').textContent = '技能冷却: ' + Math.ceil(gameState.mySkillCD) + 's';
-  } else {
-    el('skill1').textContent = '✓ 技能就绪';
-  }
-  
-  if (gameState.oppoSkillCD > 0) {
-    el('skill2').textContent = '冷却中...';
-  } else {
-    el('skill2').textContent = '⚠ 对方技能就绪';
+  const oppo = game.playerNumber === 1 ? data.player2 : data.player1;
+  if (oppo) {
+    game.oppoHP = oppo.hp;
+    game.oppoX = oppo.x || 750;
+    game.oppoY = oppo.y || 300;
   }
 }
 
 function gameLoop() {
-  if (!gameState.gameActive) return;
+  if (!game.gameActive) return;
   
-  // 更新技能冷却
-  if (gameState.mySkillCD > 0) gameState.mySkillCD -= 0.016;
-  if (gameState.oppoSkillCD > 0) gameState.oppoSkillCD -= 0.016;
+  // 移动
+  if (game.keys['ArrowLeft']) game.myX -= HEROES[game.selectedHero].speed;
+  if (game.keys['ArrowRight']) game.myX += HEROES[game.selectedHero].speed;
   
-  // 物理更新
-  gameState.myVY += 0.6; // 重力
-  if (gameState.myVY > 0) gameState.myVY = Math.min(gameState.myVY, 12);
-  gameState.myX += gameState.myVY * 0.1;
+  game.myX = Math.max(50, Math.min(450, game.myX));
   
-  // 碰撞检测
-  if (gameState.myX + 200 > 450) {
-    gameState.isJumping = false;
-    gameState.myVY = 0;
+  // 重力
+  game.myVY += 0.6;
+  game.myY += game.myVY;
+  
+  if (game.myY >= 300) {
+    game.myY = 300;
+    game.myVY = 0;
+    game.isJumping = false;
   }
   
-  // 特效更新
-  gameState.skillEffects = gameState.skillEffects.filter(e => {
-    e.life--;
-    return e.life > 0;
-  });
+  // 冷却
+  if (game.mySkillCD > 0) game.mySkillCD -= 0.016;
+  if (game.oppoSkillCD > 0) game.oppoSkillCD -= 0.016;
+  
+  // 特效
+  game.effects = game.effects.filter(e => (e.life--, e.life > 0));
+  
+  // 更新Firebase
+  const hero = HEROES[game.selectedHero];
+  const pkey = game.playerNumber === 1 ? 'player1' : 'player2';
+  game.roomRef.child(pkey).update({
+    x: game.myX,
+    y: game.myY,
+    hp: game.myHP
+  }).catch(e => console.log('更新失败:', e));
   
   updateUI();
-  drawGame();
+  draw();
   
   requestAnimationFrame(gameLoop);
 }
 
-function drawGame() {
-  const canvas = el('gameCanvas');
-  const ctx = canvas.getContext('2d');
+function updateUI() {
+  const hero = HEROES[game.selectedHero];
+  el('health1').style.width = Math.max(0, game.myHP / hero.hp * 100) + '%';
+  el('health2').style.width = Math.max(0, game.oppoHP / hero.hp * 100) + '%';
+  el('hp1').textContent = Math.max(0, Math.floor(game.myHP));
+  el('hp2').textContent = Math.max(0, Math.floor(game.oppoHP));
   
+  el('skill1').textContent = game.mySkillCD > 0 ? '冷却: ' + Math.ceil(game.mySkillCD) + 's' : '✓ 就绪';
+  el('skill2').textContent = game.oppoSkillCD > 0 ? '冷却中' : '⚠ 就绪';
+}
+
+function draw() {
   // 背景
-  ctx.fillStyle = 'linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%)';
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, '#87ceeb');
-  gradient.addColorStop(1, '#e0f6ff');
-  ctx.fillStyle = gradient;
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, '#87ceeb');
+  grad.addColorStop(1, '#e0f6ff');
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
   // 地面
@@ -610,86 +515,59 @@ function drawGame() {
   ctx.stroke();
   ctx.setLineDash([]);
   
-  // 玩家1
-  drawCharacter(ctx, gameState.myX, canvas.height - 150, HEROES[gameState.selectedHero], gameState.isAttacking);
-  
-  // 玩家2
-  drawCharacter(ctx, gameState.oppoX, canvas.height - 150, HEROES[gameState.selectedHero], gameState.oppoIsAttacking);
+  // 绘制角色
+  drawChar(game.myX, game.myY, HEROES[game.selectedHero], '#3498db');
+  drawChar(game.oppoX, game.oppoY, HEROES[game.selectedHero], '#e74c3c');
   
   // 特效
-  gameState.skillEffects.forEach(effect => {
+  game.effects.forEach(e => {
     ctx.font = 'bold 40px Arial';
-    ctx.fillText(effect.text, effect.x, effect.y);
+    ctx.fillText(e.text, e.x, e.y);
   });
-  
-  // 说明
-  ctx.fillStyle = '#333';
-  ctx.font = 'bold 16px Arial';
-  ctx.fillText('P1 (你)', 50, 50);
-  ctx.fillText('P2 (对手)', canvas.width - 150, 50);
 }
 
-function drawCharacter(ctx, x, y, hero, isAttacking) {
-  const size = 80;
+function drawChar(x, y, hero, color) {
+  const size = 60;
+  ctx.fillStyle = color;
+  ctx.fillRect(x - size/2, y - size/2, size, size);
   
-  // 身体
-  ctx.fillStyle = '#667eea';
-  if (isAttacking) {
-    // 攻击动画：缩放
-    ctx.fillRect(x - size/2, y - size/2, size * 0.9, size * 1.1);
-  } else {
-    ctx.fillRect(x - size/2, y - size/2, size, size);
-  }
-  
-  // 大眼睛
   ctx.fillStyle = '#fff';
   ctx.beginPath();
-  ctx.arc(x - 15, y - 10, 12, 0, Math.PI * 2);
+  ctx.arc(x - 12, y - 10, 10, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(x + 15, y - 10, 12, 0, Math.PI * 2);
+  ctx.arc(x + 12, y - 10, 10, 0, Math.PI * 2);
   ctx.fill();
   
-  // 瞳孔
   ctx.fillStyle = '#000';
   ctx.beginPath();
-  ctx.arc(x - 15, y - 10, 6, 0, Math.PI * 2);
+  ctx.arc(x - 12, y - 10, 5, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(x + 15, y - 10, 6, 0, Math.PI * 2);
+  ctx.arc(x + 12, y - 10, 5, 0, Math.PI * 2);
   ctx.fill();
   
-  // 嘴
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(x, y + 15, 15, 0, Math.PI);
-  ctx.stroke();
-  
-  // 英雄标识
-  ctx.font = 'bold 50px Arial';
-  ctx.fillText(hero.emoji, x - 25, y + 35);
+  ctx.font = 'bold 40px Arial';
+  ctx.fillText(hero.emoji, x - 20, y + 25);
 }
 
-function checkGameEnd() {
-  if (gameState.myHP <= 0) {
-    endGame(false);
-  } else if (gameState.oppoHP <= 0) {
-    endGame(true);
-  }
+function checkEnd() {
+  if (game.myHP <= 0) endGame(false);
+  if (game.oppoHP <= 0) endGame(true);
 }
 
-function endGame(isWin) {
-  gameState.gameActive = false;
+function endGame(win) {
+  game.gameActive = false;
   document.onkeydown = null;
   document.onkeyup = null;
+  game.roomRef.off();
   
-  el('resultTitle').textContent = isWin ? '🎉 你赢了！' : '😔 你输了';
-  el('resultDetail').innerHTML = `<strong>${gameState.playerName}</strong> vs <strong>${gameState.opponentName}</strong><br>你的血量: ${Math.max(0, Math.floor(gameState.myHP))} | 对手血量: ${Math.max(0, Math.floor(gameState.oppoHP))}`;
+  el('resultTitle').textContent = win ? '🎉 你赢了！' : '😔 你输了';
+  el('resultDetail').innerHTML = `<b>${game.playerName}</b> vs <b>${game.opponentName}</b><br>你的血量: ${Math.floor(game.myHP)} | 对手血量: ${Math.floor(game.oppoHP)}`;
   
   show('result');
   
-  db.ref('rooms/' + gameState.roomId).remove();
+  db.ref('rooms_v2/' + game.roomId).remove();
 }
 
 function surrender() {
