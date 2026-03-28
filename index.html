@@ -1,465 +1,199 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <title>⚔️ 网页1v1格斗游戏</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      font-family: Arial, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
-    .screen.active { display: flex; align-items: center; justify-content: center; z-index: 999; }
-    .container {
-      background: white;
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      max-width: 900px;
-      width: 100%;
-      text-align: center;
-    }
-    h1 { color: #667eea; margin-bottom: 20px; }
-    p { color: #666; margin-bottom: 20px; }
-    input { 
-      padding: 12px; 
-      font-size: 16px; 
-      border: 2px solid #667eea; 
-      border-radius: 8px; 
-      margin: 10px auto;
-      width: 100%;
-      max-width: 400px;
-      display: block;
-    }
-    .hero-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin: 30px 0;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .hero-btn {
-      padding: 12px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white;
-      border: 3px solid transparent;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-size: 13px;
-      font-weight: bold;
-    }
-    .hero-btn:hover { transform: translateY(-5px); }
-    .hero-btn.selected { border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.6); }
-    .btn {
-      padding: 12px 30px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      margin: 10px;
-    }
-    .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: #e74c3c; color: white; }
-    .spinner {
-      width: 60px; height: 60px;
-      border: 5px solid #f3f3f3;
-      border-top: 5px solid #667eea;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 30px auto;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    canvas { display: block; margin: 0 auto; background: linear-gradient(180deg, #87ceeb, #e0f6ff); border: 4px solid #333; border-radius: 10px; max-width: 100%; }
-    .game-info { display: flex; justify-content: space-around; margin-bottom: 15px; flex-wrap: wrap; }
-    .player-info { flex: 1; min-width: 180px; text-align: center; }
-    .player-name { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
-    .health-bar { width: 100%; height: 25px; background: #ddd; border-radius: 12px; overflow: hidden; margin: 8px 0; border: 2px solid #333; }
-    .health-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); width: 100%; transition: width 0.2s; }
-    .hp-text { font-size: 12px; color: #666; margin-top: 3px; }
-    .skill-info { font-size: 12px; margin-top: 5px; color: #667eea; font-weight: bold; }
-    .controls { text-align: center; margin-top: 15px; color: #333; font-size: 14px; }
-  </style>
+<meta charset="UTF-8">
+<title>⚔️ 质变版1v1格斗</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<style>
+body{margin:0;background:#111;color:#fff;font-family:Arial;text-align:center}
+canvas{background:linear-gradient(#87ceeb,#e0f6ff);display:block;margin:20px auto;border:4px solid #000}
+input,button{padding:10px;margin:10px}
+</style>
 </head>
+
 <body>
 
-<div id="lobby" class="screen active">
-  <div class="container">
-    <h1>⚔️ 网页1v1格斗游戏</h1>
-    <p>与全球玩家实时对战！</p>
-    <input id="playerName" placeholder="输入你的昵称" maxlength="10">
-    <p style="margin-top: 30px; font-weight: bold;">选择你的英雄：</p>
-    <div id="heroList" class="hero-grid"></div>
-    <button id="joinBtn" class="btn btn-primary" disabled onclick="joinGame()">进入竞技场</button>
-  </div>
-</div>
+<h2>⚔️ 质变版1v1格斗（连招+技能+击退）</h2>
+<input id="name" placeholder="输入昵称">
+<button onclick="join()">开始匹配</button>
 
-<div id="waiting" class="screen">
-  <div class="container">
-    <h2>🔍 寻找对手中...</h2>
-    <div class="spinner"></div>
-    <p>等待对手进入房间</p>
-    <button class="btn btn-secondary" onclick="cancelMatch()">返回大厅</button>
-  </div>
-</div>
-
-<div id="battle" class="screen">
-  <div class="container" style="padding: 20px;">
-    <div class="game-info">
-      <div class="player-info">
-        <div id="player1Name" class="player-name"></div>
-        <div class="health-bar"><div id="health1" class="health-fill"></div></div>
-        <div class="hp-text">HP: <span id="hp1">100</span></div>
-        <div class="skill-info" id="skill1"></div>
-      </div>
-      <div style="font-size: 32px; font-weight: bold; color: #e74c3c;">VS</div>
-      <div class="player-info">
-        <div id="player2Name" class="player-name"></div>
-        <div class="health-bar"><div id="health2" class="health-fill"></div></div>
-        <div class="hp-text">HP: <span id="hp2">100</span></div>
-        <div class="skill-info" id="skill2"></div>
-      </div>
-    </div>
-    <canvas id="gameCanvas" width="900" height="450"></canvas>
-    <div class="controls">
-      <p><strong>⌨️ 操作说明</strong></p>
-      <p>← → 移动 | ↑ 跳跃 | 空格 攻击 | Ctrl 技能</p>
-    </div>
-    <button class="btn btn-secondary" onclick="surrender()">投降</button>
-  </div>
-</div>
-
-<div id="result" class="screen">
-  <div class="container">
-    <h2 id="resultTitle" style="font-size: 48px; margin-bottom: 30px;"></h2>
-    <p id="resultDetail" style="font-size: 18px; color: #666; margin-bottom: 30px;"></p>
-    <button class="btn btn-primary" onclick="location.reload()">重新开始</button>
-  </div>
-</div>
+<canvas id="c" width="900" height="450"></canvas>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyClPWDNsJXUerSS6YGfMsir1H3KAut1gtE",
-  authDomain: "game-d7e6d.firebaseapp.com",
-  databaseURL: "https://game-d7e6d-default-rtdb.firebaseio.com",
-  projectId: "game-d7e6d"
+const firebaseConfig={
+  apiKey:"AIzaSyClPWDNsJXUerSS6YGfMsir1H3KAut1gtE",
+  databaseURL:"https://game-d7e6d-default-rtdb.firebaseio.com",
 };
-
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db=firebase.database();
 
-const HEROES = {
-  'sword': { name: '⚔️ 剑客', hp: 100, dmg: 16, spd: 7, emoji: '🗡️' },
-  'knight': { name: '🛡️ 重骑', hp: 140, dmg: 12, spd: 5, emoji: '🛡️' },
-  'pyro': { name: '🔥 火法', hp: 90, dmg: 18, spd: 6, emoji: '🔥' },
-  'frost': { name: '❄️ 冰法', hp: 90, dmg: 13, spd: 6, emoji: '❄️' },
-  'bolt': { name: '⚡ 雷电', hp: 85, dmg: 22, spd: 7, emoji: '⚡' },
-  'assassin': { name: '🗡️ 刺客', hp: 70, dmg: 21, spd: 10, emoji: '🗡️' },
-  'druid': { name: '🌿 自然', hp: 110, dmg: 11, spd: 5, emoji: '🌿' },
-  'beast': { name: '👹 怪兽', hp: 120, dmg: 14, spd: 6, emoji: '👹' }
+let G={
+ x:150,x2:750,
+ y:300,y2:300,
+ hp:100,hp2:100,
+ keys:{},
+ rid:null,
+ num:0,
+ atkcd:0,
+ skillcd:0,
+ combo:0,
+ effects:[]
 };
 
-let G = {
-  name: '', hero: 'sword', hero2: 'sword', num: 0, rid: '', hp: 100, hp2: 100,
-  x: 150, x2: 750, y: 300, y2: 300, vy: 0, jump: false,
-  skillcd: 0, skillcd2: 0, active: false, oppname: '对手',
-  effects: [], keys: {}, sync: null
-};
+function join(){
+ const name=document.getElementById('name').value;
+ if(!name) return alert('输入名字');
 
-const el = id => document.getElementById(id);
-const show = id => {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  el(id).classList.add('active');
-};
+ db.ref('queue').once('value',snap=>{
+  let q=snap.val()||[];
 
-function initHeroes() {
-  let h = '';
-  for (let [k, v] of Object.entries(HEROES)) {
-    h += `<button class="hero-btn" onclick="selectHero('${k}')" id="h_${k}">${v.name}<br><small>HP:${v.hp}</small></button>`;
-  }
-  el('heroList').innerHTML = h;
-  selectHero('sword');
-}
+  if(q.length>0){
+    G.rid=q[0].rid;
+    G.num=2;
+    db.ref('rooms/'+G.rid+'/p2').set({x:750,y:300});
+    db.ref('queue').set([]);
+    start();
+  }else{
+    G.rid='r'+Math.random();
+    G.num=1;
+    db.ref('rooms/'+G.rid).set({p1:{x:150,y:300}});
+    db.ref('queue').set([{rid:G.rid}]);
 
-function selectHero(k) {
-  G.hero = k;
-  document.querySelectorAll('.hero-btn').forEach(b => b.classList.remove('selected'));
-  el('h_' + k).classList.add('selected');
-  updateBtn();
-}
-
-function updateBtn() {
-  el('joinBtn').disabled = !el('playerName').value.trim();
-}
-
-el('playerName').addEventListener('input', updateBtn);
-
-async function joinGame() {
-  G.name = el('playerName').value.trim();
-  if (!G.name) { alert('输入昵称'); return; }
-  show('waiting');
-  
-  try {
-    const snap = await db.ref('q').once('value');
-    const q = snap.val() || [];
-    
-    if (q.length > 0) {
-      G.rid = q[0].rid;
-      G.num = 2;
-      G.oppname = q[0].name;
-      G.hero2 = q[0].hero;
-      
-      const h = HEROES[G.hero];
-      await db.ref('r/' + G.rid).update({
-        p2: { n: G.name, h: G.hero, hp: h.hp, x: 750, y: 300 }
-      });
-      
-      await db.ref('q').set(q.slice(1));
-      setTimeout(() => startGame(), 800);
-    } else {
-      G.rid = '_' + Math.random().toString(36).substr(2, 9);
-      G.num = 1;
-      
-      const h = HEROES[G.hero];
-      await db.ref('r/' + G.rid).set({
-        p1: { n: G.name, h: G.hero, hp: h.hp, x: 150, y: 300 },
-        p2: null
-      });
-      
-      await db.ref('q').set([...q, { rid: G.rid, name: G.name, hero: G.hero }]);
-      
-      const tmr = setInterval(() => {
-        db.ref('r/' + G.rid).once('value', s => {
-          if (s.val() && s.val().p2) {
-            clearInterval(tmr);
-            G.oppname = s.val().p2.n;
-            G.hero2 = s.val().p2.h;
-            setTimeout(() => startGame(), 500);
-          }
-        });
-      }, 500);
-      
-      setTimeout(() => clearInterval(tmr), 120000);
-    }
-  } catch (e) {
-    console.error(e);
-    alert('连接失败: ' + e.message);
-    show('lobby');
-  }
-}
-
-function cancelMatch() {
-  db.ref('q').once('value', s => {
-    const q = s.val() || [];
-    db.ref('q').set(q.filter(x => x.rid !== G.rid));
-  });
-  show('lobby');
-}
-
-function startGame() {
-  show('battle');
-  G.active = true;
-  
-  const h = HEROES[G.hero];
-  const h2 = HEROES[G.hero2];
-  G.hp = h.hp;
-  G.hp2 = h2.hp;
-  
-  const p1 = G.num === 1 ? G.name : G.oppname;
-  const p2 = G.num === 1 ? G.oppname : G.name;
-  
-  el('player1Name').textContent = p1 + ' ' + h.name;
-  el('player2Name').textContent = p2 + ' ' + h2.name;
-  
-  document.onkeydown = e => {
-    G.keys[e.key] = true;
-    if (e.key === ' ') { e.preventDefault(); atk(); }
-    if (e.key === 'Control') { e.preventDefault(); skl(); }
-    if (e.key === 'ArrowUp') { e.preventDefault(); jmp(); }
-  };
-  
-  document.onkeyup = e => { G.keys[e.key] = false; };
-  
-  loop();
-  
-  G.sync = setInterval(() => {
-    db.ref('r/' + G.rid).once('value', s => {
-      if (s.val()) {
-        const d = G.num === 1 ? s.val().p2 : s.val().p1;
-        if (d) {
-          G.hero2 = d.h;
-          G.hp2 = d.hp;
-          G.x2 = d.x;
-          G.y2 = d.y;
+    const t=setInterval(()=>{
+      db.ref('rooms/'+G.rid).once('value',s=>{
+        if(s.val().p2){
+          clearInterval(t);
+          start();
         }
-      }
-    });
-  }, 100);
-}
-
-function atk() {
-  const h = HEROES[G.hero];
-  G.hp2 -= h.dmg;
-  G.effects.push({ x: G.x2, y: G.y2 - 50, t: '💥', l: 30 });
-  chk();
-}
-
-function skl() {
-  if (G.skillcd > 0) return;
-  const h = HEROES[G.hero];
-  G.skillcd = 8;
-  G.hp2 -= h.dmg * 1.5;
-  G.effects.push({ x: G.x2, y: G.y2 - 80, t: '⚡✨', l: 50 });
-  chk();
-}
-
-function jmp() {
-  if (!G.jump) {
-    G.vy = -15;
-    G.jump = true;
+      });
+    },500);
   }
+ });
 }
 
-function loop() {
-  if (!G.active) return;
-  
-  if (G.keys['ArrowLeft']) G.x -= HEROES[G.hero].spd;
-  if (G.keys['ArrowRight']) G.x += HEROES[G.hero].spd;
-  
-  G.x = Math.max(50, Math.min(450, G.x));
-  
-  G.vy += 0.6;
-  G.y += G.vy;
-  
-  if (G.y >= 300) {
-    G.y = 300;
-    G.vy = 0;
-    G.jump = false;
+function start(){
+ document.onkeydown=e=>{
+  G.keys[e.key]=true;
+  if(e.key===' ') atk();
+  if(e.key==='Control') skill();
+ };
+ document.onkeyup=e=>G.keys[e.key]=false;
+
+ db.ref('rooms/'+G.rid+'/events').on('child_added',s=>{
+  const e=s.val();
+  if(e.from!==G.num){
+    if(e.type==='atk'){
+      G.hp-=e.dmg;
+      knockback(false);
+    }
+    if(e.type==='skill'){
+      G.hp-=e.dmg;
+      G.effects.push({x:G.x,y:G.y-50,t:'💥',l:30});
+    }
   }
-  
-  if (G.skillcd > 0) G.skillcd -= 0.016;
-  if (G.skillcd2 > 0) G.skillcd2 -= 0.016;
-  
-  G.effects = G.effects.filter(e => (e.l--, e.l > 0));
-  
-  upUI();
-  draw();
-  
-  const pk = G.num === 1 ? 'p1' : 'p2';
-  db.ref('r/' + G.rid + '/' + pk).update({
-    x: G.x, y: G.y, hp: G.hp
-  }).catch(() => {});
-  
-  requestAnimationFrame(loop);
+ });
+
+ loop();
 }
 
-function upUI() {
-  const h = HEROES[G.hero];
-  const h2 = HEROES[G.hero2];
-  el('health1').style.width = Math.max(0, G.hp / h.hp * 100) + '%';
-  el('health2').style.width = Math.max(0, G.hp2 / h2.hp * 100) + '%';
-  el('hp1').textContent = Math.max(0, Math.floor(G.hp));
-  el('hp2').textContent = Math.max(0, Math.floor(G.hp2));
-  
-  el('skill1').textContent = G.skillcd > 0 ? '冷却: ' + Math.ceil(G.skillcd) + 's' : '✓ 就绪';
-  el('skill2').textContent = G.skillcd2 > 0 ? '冷却中' : '⚠ 就绪';
+function atk(){
+ if(G.atkcd>0) return;
+ G.atkcd=15;
+
+ G.combo=(G.combo+1)%3;
+
+ if(Math.abs(G.x-G.x2)<90){
+   let dmg=10+G.combo*3;
+
+   db.ref('rooms/'+G.rid+'/events').push({
+     type:'atk',
+     from:G.num,
+     dmg:dmg
+   });
+
+   G.hp2-=dmg;
+   knockback(true);
+ }
 }
 
-function draw() {
-  const c = el('gameCanvas');
-  const ctx = c.getContext('2d');
-  
-  const g = ctx.createLinearGradient(0, 0, 0, c.height);
-  g.addColorStop(0, '#87ceeb');
-  g.addColorStop(1, '#e0f6ff');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, c.width, c.height);
-  
-  ctx.fillStyle = '#90EE90';
-  ctx.fillRect(0, c.height - 80, c.width, 80);
-  
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([10, 10]);
-  ctx.beginPath();
-  ctx.moveTo(c.width / 2, 0);
-  ctx.lineTo(c.width / 2, c.height);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  
-  dchr(G.x, G.y, G.hero, '#3498db');
-  dchr(G.x2, G.y2, G.hero2, '#e74c3c');
-  
-  G.effects.forEach(e => {
-    ctx.font = 'bold 40px Arial';
-    ctx.fillText(e.t, e.x, e.y);
-  });
+function skill(){
+ if(G.skillcd>0) return;
+ G.skillcd=120;
+
+ if(Math.abs(G.x-G.x2)<150){
+   db.ref('rooms/'+G.rid+'/events').push({
+     type:'skill',
+     from:G.num,
+     dmg:20
+   });
+
+   G.hp2-=20;
+   G.effects.push({x:G.x2,y:G.y2-60,t:'🔥',l:40});
+ }
 }
 
-function dchr(x, y, hero, col) {
-  const c = el('gameCanvas');
-  const ctx = c.getContext('2d');
-  const s = 60;
-  
-  ctx.fillStyle = col;
-  ctx.fillRect(x - s/2, y - s/2, s, s);
-  
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(x - 12, y - 10, 10, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x + 12, y - 10, 10, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.fillStyle = '#000';
-  ctx.beginPath();
-  ctx.arc(x - 12, y - 10, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x + 12, y - 10, 5, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.font = 'bold 40px Arial';
-  ctx.fillText(HEROES[hero].emoji, x - 20, y + 25);
+function knockback(me){
+ if(me){
+   G.x2 += (G.x2>G.x?30:-30);
+ }else{
+   G.x += (G.x>G.x2?30:-30);
+ }
 }
 
-function chk() {
-  if (G.hp <= 0) end(false);
-  if (G.hp2 <= 0) end(true);
+function loop(){
+
+ if(G.keys['ArrowLeft']) G.x-=5;
+ if(G.keys['ArrowRight']) G.x+=5;
+
+ G.x=Math.max(50,Math.min(400,G.x));
+
+ if(G.atkcd>0) G.atkcd--;
+ if(G.skillcd>0) G.skillcd--;
+
+ G.effects=G.effects.filter(e=>(e.l--,e.l>0));
+
+ db.ref('rooms/'+G.rid+'/p'+G.num).update({
+   x:G.x
+ });
+
+ db.ref('rooms/'+G.rid).once('value',s=>{
+  let d=s.val();
+  let opp=G.num===1?d.p2:d.p1;
+  if(opp) G.x2=opp.x;
+ });
+
+ draw();
+
+ requestAnimationFrame(loop);
 }
 
-function end(w) {
-  G.active = false;
-  clearInterval(G.sync);
-  document.onkeydown = null;
-  document.onkeyup = null;
-  
-  el('resultTitle').textContent = w ? '🎉 你赢了！' : '😔 你输了';
-  el('resultDetail').innerHTML = `<b>${G.name}</b> vs <b>${G.oppname}</b><br>你: ${Math.floor(G.hp)} | 对手: ${Math.floor(G.hp2)}`;
-  
-  show('result');
-  db.ref('r/' + G.rid).remove();
+function draw(){
+ let ctx=c.getContext('2d');
+ ctx.clearRect(0,0,900,450);
+
+ ctx.fillStyle='green';
+ ctx.fillRect(0,370,900,80);
+
+ drawChar(G.x,300,'blue');
+ drawChar(G.x2,300,'red');
+
+ G.effects.forEach(e=>{
+  ctx.font='40px Arial';
+  ctx.fillText(e.t,e.x,e.y);
+ });
+
+ ctx.fillText('HP:'+Math.floor(G.hp),20,20);
+ ctx.fillText('HP:'+Math.floor(G.hp2),780,20);
 }
 
-function surrender() {
-  end(false);
+function drawChar(x,y,color){
+ let ctx=c.getContext('2d');
+ ctx.fillStyle=color;
+ ctx.fillRect(x-25,y-25,50,50);
 }
-
-initHeroes();
 </script>
 
 </body>
